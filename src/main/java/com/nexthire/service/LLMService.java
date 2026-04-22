@@ -4,6 +4,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -12,38 +13,29 @@ import org.springframework.stereotype.Service;
 @Service
 public class LLMService {
 
-    @Value("${gemini.api.key}")
+    @Value("${openrouter.api.key}")
     private String apiKey;
 
     public String getRecommendations(String cvText, String githubUrl, String targetRole) {
 
-        // Guard: if user has not set the API key yet, return a helpful message
-        if (apiKey == null || apiKey.trim().isEmpty() || apiKey.equals("YOUR_GEMINI_API_KEY_HERE")) {
+        if (apiKey == null || apiKey.trim().isEmpty()) {
             return """
                    AI recommendations are not available.
 
-                   To enable them:
-                   1. Go to https://aistudio.google.com/ and get a free API key
-                   2. Open src/main/resources/application.properties
-                   3. Replace YOUR_GEMINI_API_KEY_HERE with your actual key
-                   4. Restart the application""";
+                   Please set OPENROUTER_API_KEY in environment variables.
+                   """;
         }
 
-String prompt = """
-                You are a senior-level {role} professional with industry experience.
+        String prompt = """
+                You are a senior-level %s professional with industry experience.
 
                 You are evaluating a candidate's readiness for the role.
 
-                Target Role:
-                {role}
+                Candidate CV:
+                %s
 
-                User Skills: {skills}
-                User Projects: {projects}
-                Certifications: {certifications}
-                GitHub Information:
-                - Repository Count: {repository_count}
-                - Contribution Count: {contribution_count}
-                Required Skills for Role: {required_skills}
+                GitHub Profile:
+                %s
 
                 Your task:
                 1) Identify missing or weak skills
@@ -54,98 +46,197 @@ String prompt = """
                 6) Keep the response realistic and industry-focused
 
                 Return the result as bullet points.
-                Limit the response to 6–8 recommendations.""";
+                Limit the response to 6–8 recommendations.
+                """.formatted(targetRole, cvText, githubUrl);
 
         try {
-            String apiUrl = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=" + apiKey;
+
+            String apiUrl = "https://openrouter.ai/api/v1/chat/completions";
 
             URL url = URI.create(apiUrl).toURL();
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
             connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/json");
+
+            connection.setRequestProperty(
+                    "Authorization",
+                    "Bearer " + apiKey
+            );
+
+            connection.setRequestProperty(
+                    "Content-Type",
+                    "application/json"
+            );
+
+            connection.setRequestProperty(
+                    "HTTP-Referer",
+                    "https://nexthire.onrender.com"
+            );
+
+            connection.setRequestProperty(
+                    "X-Title",
+                    "NEXTHIRE"
+            );
+
             connection.setDoOutput(true);
+
             connection.setConnectTimeout(15000);
             connection.setReadTimeout(30000);
 
-            // Build the request body manually without extra libraries
             String requestBody = """
                     {
-                      "contents": [
+                      "model": "deepseek/deepseek-chat",
+                      "messages": [
                         {
-                          "parts": [
-                            {
-                              "text": """ + escapeJson(prompt) + """
-                            }
-                          ]
+                          "role": "user",
+                          "content": "%s"
                         }
-                      ]
-                    }""";
+                      ],
+                      "temperature": 0.7,
+                      "max_tokens": 500
+                    }
+                    """.formatted(escapeJson(prompt));
 
-            try (OutputStream outputStream = connection.getOutputStream()) {
-                outputStream.write(requestBody.getBytes("UTF-8"));
+            try (OutputStream outputStream =
+                         connection.getOutputStream()) {
+
+                outputStream.write(
+                        requestBody.getBytes(
+                                StandardCharsets.UTF_8
+                        )
+                );
             }
 
             int responseCode = connection.getResponseCode();
 
             if (responseCode == 200) {
-                try (Scanner scanner = new Scanner(connection.getInputStream(), "UTF-8")) {
-                    StringBuilder response = new StringBuilder();
+
+                try (Scanner scanner =
+                             new Scanner(
+                                     connection.getInputStream(),
+                                     StandardCharsets.UTF_8
+                             )) {
+
+                    StringBuilder response =
+                            new StringBuilder();
+
                     while (scanner.hasNextLine()) {
-                        response.append(scanner.nextLine());
+                        response.append(
+                                scanner.nextLine()
+                        );
                     }
-                    return extractTextFromResponse(response.toString());
+
+                    return extractTextFromResponse(
+                            response.toString()
+                    );
                 }
 
             } else {
-                try (Scanner scanner = new Scanner(connection.getErrorStream(), "UTF-8")) {
-                    StringBuilder errorResponse = new StringBuilder();
+
+                try (Scanner scanner =
+                             new Scanner(
+                                     connection.getErrorStream(),
+                                     StandardCharsets.UTF_8
+                             )) {
+
+                    StringBuilder error =
+                            new StringBuilder();
+
                     while (scanner.hasNextLine()) {
-                        errorResponse.append(scanner.nextLine());
+                        error.append(
+                                scanner.nextLine()
+                        );
                     }
-                    System.out.println("Gemini API error response: " + errorResponse.toString());
-                    return "Gemini API returned an error (HTTP " + responseCode + "). Please check your API key in application.properties.";
+
+                    System.out.println(
+                            "OpenRouter error: " +
+                            error.toString()
+                    );
+
+                    return "AI service returned error (HTTP "
+                            + responseCode + ")";
                 }
             }
 
         } catch (java.io.IOException e) {
-            System.out.println("Error calling Gemini API: " + e.getMessage());
-            return "AI recommendations are currently unavailable. Error: " + e.getMessage();
+
+            System.out.println(
+                    "Error calling OpenRouter: "
+                            + e.getMessage()
+            );
+
+            return "AI recommendations unavailable: "
+                    + e.getMessage();
         }
     }
 
     private String escapeJson(String text) {
+
         text = text.replace("\\", "\\\\");
         text = text.replace("\"", "\\\"");
         text = text.replace("\n", "\\n");
         text = text.replace("\r", "\\r");
         text = text.replace("\t", "\\t");
-        return "\"" + text + "\"";
+
+        return text;
     }
 
-    private String extractTextFromResponse(String jsonResponse) {
+    private String extractTextFromResponse(String json) {
+
         try {
-            int textIndex = jsonResponse.indexOf("\"text\":");
-            if (textIndex != -1) {
-                int startQuote = jsonResponse.indexOf("\"", textIndex + 7);
-                if (startQuote != -1) {
-                    int endQuote = startQuote + 1;
-                    while (endQuote < jsonResponse.length()) {
-                        char c = jsonResponse.charAt(endQuote);
-                        if (c == '"' && jsonResponse.charAt(endQuote - 1) != '\\') {
-                            break;
-                        }
-                        endQuote++;
+
+            int contentIndex =
+                    json.indexOf("\"content\":\"");
+
+            if (contentIndex != -1) {
+
+                int start =
+                        contentIndex + 11;
+
+                int end = start;
+
+                while (end < json.length()) {
+
+                    char c =
+                            json.charAt(end);
+
+                    if (c == '"' &&
+                        json.charAt(end - 1) != '\\') {
+                        break;
                     }
-                    String extracted = jsonResponse.substring(startQuote + 1, endQuote);
-                    extracted = extracted.replace("\\n", "\n");
-                    extracted = extracted.replace("\\\"", "\"");
-                    extracted = extracted.replace("\\\\", "\\");
-                    return extracted;
+
+                    end++;
                 }
+
+                String result =
+                        json.substring(start, end);
+
+                result = result.replace(
+                        "\\n",
+                        "\n"
+                );
+
+                result = result.replace(
+                        "\\\"",
+                        "\""
+                );
+
+                result = result.replace(
+                        "\\\\",
+                        "\\"
+                );
+
+                return result;
             }
+
         } catch (Exception e) {
-            System.out.println("Error extracting text from Gemini response: " + e.getMessage());
+
+            System.out.println(
+                    "Parse error: "
+                            + e.getMessage()
+            );
         }
-        return "Could not parse AI response. Please check the Gemini API configuration.";
+
+        return "Could not parse AI response.";
     }
 }
