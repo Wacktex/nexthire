@@ -1,12 +1,12 @@
 package com.nexthire.service;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Scanner;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 @Service
 public class LLMService {
@@ -26,16 +26,29 @@ public class LLMService {
                    "4. Restart the application";
         }
 
-        String prompt = "You are a career guidance assistant. A student has submitted their CV and GitHub profile for analysis.\n\n" +
-                "Target Role: " + targetRole + "\n\n" +
-                "GitHub Profile: " + githubUrl + "\n\n" +
-                "CV Text:\n" + cvText + "\n\n" +
-                "Please provide 3 to 5 specific, actionable career recommendations to help this student get a job as a " + targetRole + ". " +
-                "Keep your response simple, direct, and easy to understand. " +
-                "Format your response as a numbered list.";
+String prompt = "You are a senior-level {role} professional with industry experience.\n\n" +
+                "You are evaluating a candidate's readiness for the role.\n\n" +
+                "Target Role:\n" +
+                "{role}\n\n" +
+                "User Skills: {skills}\n" +
+                "User Projects: {projects}\n" +
+                "Certifications: {certifications}\n" +
+                "GitHub Information:\n" +
+                "- Repository Count: {repository_count}\n" +
+                "- Contribution Count: {contribution_count}\n" +
+                "Required Skills for Role: {required_skills}\n\n" +
+                "Your task:\n" +
+                "1) Identify missing or weak skills\n" +
+                "2) Suggest specific projects to build\n" +
+                "3) Recommend useful certifications or courses\n" +
+                "4) Suggest improvements to the CV\n" +
+                "5) Prioritize recommendations by importance\n" +
+                "6) Keep the response realistic and industry-focused\n\n" +
+                "Return the result as bullet points.\n" +
+                "Limit the response to 6–8 recommendations.";
 
         try {
-            String apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+            String apiUrl = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=" + apiKey;
 
             URL url = new URL(apiUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
