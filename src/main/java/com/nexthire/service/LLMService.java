@@ -2,6 +2,7 @@ package com.nexthire.service;
 
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.util.Scanner;
 
@@ -18,39 +19,47 @@ public class LLMService {
 
         // Guard: if user has not set the API key yet, return a helpful message
         if (apiKey == null || apiKey.trim().isEmpty() || apiKey.equals("YOUR_GEMINI_API_KEY_HERE")) {
-            return "AI recommendations are not available.\n\n" +
-                   "To enable them:\n" +
-                   "1. Go to https://aistudio.google.com/ and get a free API key\n" +
-                   "2. Open src/main/resources/application.properties\n" +
-                   "3. Replace YOUR_GEMINI_API_KEY_HERE with your actual key\n" +
-                   "4. Restart the application";
+            return """
+                   AI recommendations are not available.
+
+                   To enable them:
+                   1. Go to https://aistudio.google.com/ and get a free API key
+                   2. Open src/main/resources/application.properties
+                   3. Replace YOUR_GEMINI_API_KEY_HERE with your actual key
+                   4. Restart the application""";
         }
 
-String prompt = "You are a senior-level {role} professional with industry experience.\n\n" +
-                "You are evaluating a candidate's readiness for the role.\n\n" +
-                "Target Role:\n" +
-                "{role}\n\n" +
-                "User Skills: {skills}\n" +
-                "User Projects: {projects}\n" +
-                "Certifications: {certifications}\n" +
-                "GitHub Information:\n" +
-                "- Repository Count: {repository_count}\n" +
-                "- Contribution Count: {contribution_count}\n" +
-                "Required Skills for Role: {required_skills}\n\n" +
-                "Your task:\n" +
-                "1) Identify missing or weak skills\n" +
-                "2) Suggest specific projects to build\n" +
-                "3) Recommend useful certifications or courses\n" +
-                "4) Suggest improvements to the CV\n" +
-                "5) Prioritize recommendations by importance\n" +
-                "6) Keep the response realistic and industry-focused\n\n" +
-                "Return the result as bullet points.\n" +
-                "Limit the response to 6–8 recommendations.";
+String prompt = """
+                You are a senior-level {role} professional with industry experience.
+
+                You are evaluating a candidate's readiness for the role.
+
+                Target Role:
+                {role}
+
+                User Skills: {skills}
+                User Projects: {projects}
+                Certifications: {certifications}
+                GitHub Information:
+                - Repository Count: {repository_count}
+                - Contribution Count: {contribution_count}
+                Required Skills for Role: {required_skills}
+
+                Your task:
+                1) Identify missing or weak skills
+                2) Suggest specific projects to build
+                3) Recommend useful certifications or courses
+                4) Suggest improvements to the CV
+                5) Prioritize recommendations by importance
+                6) Keep the response realistic and industry-focused
+
+                Return the result as bullet points.
+                Limit the response to 6–8 recommendations.""";
 
         try {
             String apiUrl = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=" + apiKey;
 
-            URL url = new URL(apiUrl);
+            URL url = URI.create(apiUrl).toURL();
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/json");
@@ -59,45 +68,46 @@ String prompt = "You are a senior-level {role} professional with industry experi
             connection.setReadTimeout(30000);
 
             // Build the request body manually without extra libraries
-            String requestBody = "{\n" +
-                    "  \"contents\": [\n" +
-                    "    {\n" +
-                    "      \"parts\": [\n" +
-                    "        {\n" +
-                    "          \"text\": " + escapeJson(prompt) + "\n" +
-                    "        }\n" +
-                    "      ]\n" +
-                    "    }\n" +
-                    "  ]\n" +
-                    "}";
+            String requestBody = """
+                    {
+                      "contents": [
+                        {
+                          "parts": [
+                            {
+                              "text": """ + escapeJson(prompt) + """
+                            }
+                          ]
+                        }
+                      ]
+                    }""";
 
-            OutputStream outputStream = connection.getOutputStream();
-            outputStream.write(requestBody.getBytes("UTF-8"));
-            outputStream.close();
+            try (OutputStream outputStream = connection.getOutputStream()) {
+                outputStream.write(requestBody.getBytes("UTF-8"));
+            }
 
             int responseCode = connection.getResponseCode();
 
             if (responseCode == 200) {
-                Scanner scanner = new Scanner(connection.getInputStream(), "UTF-8");
-                StringBuilder response = new StringBuilder();
-                while (scanner.hasNextLine()) {
-                    response.append(scanner.nextLine());
+                try (Scanner scanner = new Scanner(connection.getInputStream(), "UTF-8")) {
+                    StringBuilder response = new StringBuilder();
+                    while (scanner.hasNextLine()) {
+                        response.append(scanner.nextLine());
+                    }
+                    return extractTextFromResponse(response.toString());
                 }
-                scanner.close();
-                return extractTextFromResponse(response.toString());
 
             } else {
-                Scanner scanner = new Scanner(connection.getErrorStream(), "UTF-8");
-                StringBuilder errorResponse = new StringBuilder();
-                while (scanner.hasNextLine()) {
-                    errorResponse.append(scanner.nextLine());
+                try (Scanner scanner = new Scanner(connection.getErrorStream(), "UTF-8")) {
+                    StringBuilder errorResponse = new StringBuilder();
+                    while (scanner.hasNextLine()) {
+                        errorResponse.append(scanner.nextLine());
+                    }
+                    System.out.println("Gemini API error response: " + errorResponse.toString());
+                    return "Gemini API returned an error (HTTP " + responseCode + "). Please check your API key in application.properties.";
                 }
-                scanner.close();
-                System.out.println("Gemini API error response: " + errorResponse.toString());
-                return "Gemini API returned an error (HTTP " + responseCode + "). Please check your API key in application.properties.";
             }
 
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             System.out.println("Error calling Gemini API: " + e.getMessage());
             return "AI recommendations are currently unavailable. Error: " + e.getMessage();
         }

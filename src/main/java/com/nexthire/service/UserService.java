@@ -72,7 +72,7 @@ public class UserService {
         StringBuilder recommendationsText = new StringBuilder();
         for (int i = 0; i < recommendations.size(); i++) {
             Recommendation rec = recommendations.get(i);
-            recommendationsText.append((i + 1) + ". " + rec.getDescription() + "\n");
+            recommendationsText.append(i + 1).append(". ").append(rec.getDescription()).append("\n");
         }
         userRepository.saveResult(cvText, githubUrl, targetRole, recommendationsText.toString());
     }

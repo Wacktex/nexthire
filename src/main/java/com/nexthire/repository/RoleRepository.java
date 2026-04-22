@@ -9,7 +9,7 @@ import java.util.List;
 @Repository
 public class RoleRepository {
 
-    private List<TargetRole> roles;
+    private final List<TargetRole> roles;
 
     public RoleRepository() {
         roles = new ArrayList<>();
