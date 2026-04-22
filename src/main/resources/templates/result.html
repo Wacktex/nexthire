@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXTHIRE – Analysis Results</title>
+    <link rel="stylesheet" th:href="@{/style.css}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="page-wrapper">
+
+        <header class="result-header">
+            <a href="/" class="back-link">← Back to Analyzer</a>
+            <div class="logo-block">
+                <span class="logo-bracket">[</span>
+                <span class="logo-text">NEXTHIRE</span>
+                <span class="logo-bracket">]</span>
+            </div>
+            <div class="result-meta">
+                <span class="result-role-tag" th:text="'Target: ' + ${targetRole}">Target Role</span>
+                <span class="result-github-tag" th:text="${githubUrl}">GitHub URL</span>
+            </div>
+        </header>
+
+        <main class="result-main">
+
+            <!-- Summary Stats -->
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <span class="stat-num" th:text="${findings.size()}">0</span>
+                    <span class="stat-label">Findings</span>
+                </div>
+                <div class="stat-divider">|</div>
+                <div class="stat-item">
+                    <span class="stat-num" th:text="${recommendations.size()}">0</span>
+                    <span class="stat-label">Recommendations</span>
+                </div>
+                <div class="stat-divider">|</div>
+                <div class="stat-item">
+                    <span class="stat-num" th:text="${foundSkills.size()}">0</span>
+                    <span class="stat-label">Skills Detected</span>
+                </div>
+                <div class="stat-divider">|</div>
+                <div class="stat-item">
+                    <span class="stat-num" th:text="${missingSkills.size()}">0</span>
+                    <span class="stat-label">Skills Missing</span>
+                </div>
+            </div>
+
+            <!-- Skills Row -->
+            <div class="skills-row">
+
+                <div class="skills-card skills-found" th:if="${not #lists.isEmpty(foundSkills)}">
+                    <h3 class="skills-card-title">✓ Skills Found in Your CV</h3>
+                    <div class="skill-tags">
+                        <span class="skill-tag skill-tag-found" th:each="skill : ${foundSkills}" th:text="${skill}">Skill</span>
+                    </div>
+                </div>
+
+                <div class="skills-card skills-missing" th:if="${not #lists.isEmpty(missingSkills)}">
+                    <h3 class="skills-card-title">✗ Skills Missing for <span th:text="${targetRole}">Role</span></h3>
+                    <div class="skill-tags">
+                        <span class="skill-tag skill-tag-missing" th:each="skill : ${missingSkills}" th:text="${skill}">Skill</span>
+                    </div>
+                </div>
+
+                <div class="skills-card skills-found" th:if="${#lists.isEmpty(foundSkills)}">
+                    <h3 class="skills-card-title">No skills detected in your CV text</h3>
+                    <p class="no-data-note">Make sure your CV includes skill names like Java, Python, Docker, etc.</p>
+                </div>
+
+            </div>
+
+            <!-- Findings Section -->
+            <section class="result-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span class="section-num">01</span>
+                        Profile Findings
+                    </h2>
+                    <span class="section-count" th:text="${findings.size()} + ' findings'">0 findings</span>
+                </div>
+
+                <div class="findings-list" th:if="${not #lists.isEmpty(findings)}">
+                    <div th:each="finding : ${findings}" class="finding-card"
+                         th:classappend="${finding.type == 'Good GitHub Activity'} ? 'finding-good' : 'finding-issue'">
+                        <div class="finding-header">
+                            <span class="finding-type" th:text="${finding.type}">Type</span>
+                            <span class="finding-source" th:text="${finding.source}">Source</span>
+                        </div>
+                        <p class="finding-description" th:text="${finding.description}">Description</p>
+                    </div>
+                </div>
+
+                <div class="no-data-card" th:if="${#lists.isEmpty(findings)}">
+                    <p>No issues found! Your profile looks good.</p>
+                </div>
+
+            </section>
+
+            <!-- Recommendations Section -->
+            <section class="result-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span class="section-num">02</span>
+                        Recommendations
+                    </h2>
+                    <span class="section-count" th:text="${recommendations.size()} + ' recommendations'">0 recommendations</span>
+                </div>
+
+                <div class="recommendations-list" th:if="${not #lists.isEmpty(recommendations)}">
+                    <div th:each="rec, stat : ${recommendations}" class="rec-card"
+                         th:classappend="${rec.priority == 'High'} ? 'rec-high' : (${rec.priority == 'Medium'} ? 'rec-medium' : 'rec-low')">
+                        <div class="rec-header">
+                            <span class="rec-number" th:text="'#' + ${stat.count}">1</span>
+                            <span class="rec-type" th:text="${rec.type}">Type</span>
+                            <span class="rec-priority" th:text="${rec.priority} + ' Priority'">Priority</span>
+                        </div>
+                        <p class="rec-description" th:text="${rec.description}">Description</p>
+                    </div>
+                </div>
+
+                <div class="no-data-card" th:if="${#lists.isEmpty(recommendations)}">
+                    <p>No recommendations generated. Your profile looks complete!</p>
+                </div>
+
+            </section>
+
+            <!-- AI Recommendations Section -->
+            <section class="result-section ai-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span class="section-num">03</span>
+                        AI Career Advice
+                    </h2>
+                    <span class="ai-badge">Powered by Google Gemini</span>
+                </div>
+
+                <div class="ai-card">
+                    <div class="ai-header">
+                        <span class="ai-icon">🤖</span>
+                        <span class="ai-label">Gemini AI Analysis for <span th:text="${targetRole}">Role</span></span>
+                    </div>
+                    <div class="ai-content">
+                        <pre class="ai-text" th:text="${llmSuggestions}">AI suggestions will appear here.</pre>
+                    </div>
+                </div>
+
+            </section>
+
+        </main>
+
+        <div class="result-actions">
+            <a href="/" class="action-btn action-btn-primary">← Analyze Another Profile</a>
+            <button class="action-btn action-btn-secondary" onclick="window.print()">Print Results</button>
+        </div>
+
+        <footer class="page-footer">
+            <p>NEXTHIRE &nbsp;|&nbsp; Academic Project &nbsp;|&nbsp; Powered by Google Gemini API</p>
+        </footer>
+
+    </div>
+
+    <script th:src="@{/script.js}"></script>
+
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXTHIRE – Career Guidance</title>
+    <link rel="stylesheet" th:href="@{/style.css}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="page-wrapper">
+
+        <header class="hero-header">
+            <div class="logo-block">
+                <span class="logo-bracket">[</span>
+                <span class="logo-text">NEXTHIRE</span>
+                <span class="logo-bracket">]</span>
+            </div>
+            <p class="hero-subtitle">AI-powered career guidance via CV + GitHub analysis</p>
+        </header>
+
+        <main class="main-content">
+
+            <div class="form-card">
+                <div class="form-card-header">
+                    <span class="step-label">// ANALYZE YOUR PROFILE</span>
+                </div>
+
+                <form action="/analyze" method="post" id="analyzeForm">
+
+                    <div class="form-group">
+                        <label for="cvText" class="form-label">
+                            <span class="label-num">01</span> Paste Your CV Text
+                        </label>
+                        <textarea
+                            id="cvText"
+                            name="cvText"
+                            class="form-textarea"
+                            rows="10"
+                            placeholder="Paste your full CV or resume text here. Include your skills, experience, education, projects, and certifications..."
+                            required></textarea>
+                        <span class="field-hint">Tip: Include skills like Java, Python, Docker etc. for better analysis.</span>
+                    </div>
+
+                    <div class="form-row">
+
+                        <div class="form-group form-group-half">
+                            <label for="githubUrl" class="form-label">
+                                <span class="label-num">02</span> GitHub Profile URL
+                            </label>
+                            <input
+                                type="url"
+                                id="githubUrl"
+                                name="githubUrl"
+                                class="form-input"
+                                placeholder="https://github.com/yourusername"
+                                required>
+                        </div>
+
+                        <div class="form-group form-group-half">
+                            <label for="targetRole" class="form-label">
+                                <span class="label-num">03</span> Target Role
+                            </label>
+                            <select id="targetRole" name="targetRole" class="form-select" required>
+                                <option value="" disabled selected>-- Select a Role --</option>
+                                <option th:each="role : ${roles}" th:value="${role}" th:text="${role}"></option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    <div class="form-row">
+
+                        <div class="form-group form-group-half">
+                            <label for="repoCount" class="form-label">
+                                <span class="label-num">04</span> GitHub Repository Count
+                            </label>
+                            <input
+                                type="number"
+                                id="repoCount"
+                                name="repoCount"
+                                class="form-input"
+                                placeholder="e.g. 12"
+                                min="0"
+                                value="0">
+                            <span class="field-hint">Check your GitHub profile page for this number.</span>
+                        </div>
+
+                        <div class="form-group form-group-half">
+                            <label for="contributionCount" class="form-label">
+                                <span class="label-num">05</span> Total Contributions (last year)
+                            </label>
+                            <input
+                                type="number"
+                                id="contributionCount"
+                                name="contributionCount"
+                                class="form-input"
+                                placeholder="e.g. 150"
+                                min="0"
+                                value="0">
+                            <span class="field-hint">Found on your GitHub profile contribution graph.</span>
+                        </div>
+
+                    </div>
+
+                    <div class="form-submit-row">
+                        <button type="submit" class="analyze-btn" id="submitBtn">
+                            <span class="btn-text">Run Analysis</span>
+                            <span class="btn-arrow">→</span>
+                        </button>
+                        <p class="submit-note">Analysis may take 10–20 seconds (AI processing)</p>
+                    </div>
+
+                </form>
+
+                <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+                    <div class="loading-box">
+                        <div class="loading-spinner"></div>
+                        <p class="loading-text">Analyzing your profile...</p>
+                        <p class="loading-subtext">Running CV analysis, GitHub checks, and AI recommendations</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="info-icon">📄</div>
+                    <h3 class="info-title">CV Analysis</h3>
+                    <p class="info-desc">Checks for missing sections, contact info, education, and certifications in your CV.</p>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">💻</div>
+                    <h3 class="info-title">GitHub Check</h3>
+                    <p class="info-desc">Evaluates your GitHub activity, repository count, and contribution history.</p>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">🎯</div>
+                    <h3 class="info-title">Skill Gap</h3>
+                    <p class="info-desc">Compares your skills to what is needed for your target role.</p>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">🤖</div>
+                    <h3 class="info-title">AI Advice</h3>
+                    <p class="info-desc">Google Gemini AI generates personalised career recommendations just for you.</p>
+                </div>
+            </div>
+
+        </main>
+
+        <footer class="page-footer">
+            <p>NEXTHIRE &nbsp;|&nbsp; Academic Project &nbsp;|&nbsp; Powered by Google Gemini API</p>
+        </footer>
+
+    </div>
+
+    <script th:src="@{/script.js}"></script>
+
+</body>
+</html>
