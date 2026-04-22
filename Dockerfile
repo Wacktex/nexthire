@@ -1,5 +1,5 @@
-# Use official Java runtime
-FROM eclipse-temurin:17-jdk
+# Use Maven with Java 17
+FROM maven:3.9.9-eclipse-temurin-17
 
 # Set working directory
 WORKDIR /app
@@ -7,11 +7,11 @@ WORKDIR /app
 # Copy project files
 COPY . .
 
-# Build the project
-RUN ./mvnw clean package || mvn clean package
+# Build the application
+RUN mvn clean package -DskipTests
 
-# Expose port
+# Expose port used by Spring Boot
 EXPOSE 8080
 
-# Run the application
-CMD ["java", "-jar", "target/nexthire-0.0.1-SNAPSHOT.jar"]
+# Start the application
+CMD ["java", "-jar", "target/nexthire-1.0.0.jar"]
